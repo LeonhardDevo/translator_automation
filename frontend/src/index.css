@@ -1,0 +1,200 @@
+/* ============================================================
+   GLOBAL DESIGN TOKENS — Modern Blue/Slate Dark Theme
+   ============================================================ */
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* Dark slate palette */
+  --color-bg-light:       #0F172A;
+  --color-bg-medium:      #1E293B;
+  --color-accent-medium:  #3B82F6;
+  --color-accent-dark:    #22D3EE;
+  --color-bg-subtle:      #020617;
+
+  /* Text */
+  --color-text-primary:   #E2E8F0;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted:     #64748B;
+  --color-text-heading:   #FFFFFF;
+
+  /* Borders */
+  --color-border:         #334155;
+  --color-border-strong:  #475569;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #22D3EE 0%, #3B82F6 100%);
+  --gradient-bg:      linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  --gradient-card:    linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+
+  /* Shadows */
+  --shadow-primary: 0 4px 15px rgba(34, 211, 238, 0.25);
+  --shadow-card:    0 10px 30px rgba(15, 23, 42, 0.4);
+  --shadow-hover:   0 20px 40px rgba(34, 211, 238, 0.2);
+
+  /* Semantic colors */
+  --color-success:       #10B981;
+  --color-success-light: #064E3B;
+  --color-danger:        #EF4444;
+  --color-danger-light:  #7F1D1D;
+  --color-warning:       #F59E0B;
+  --color-warning-light: #78350F;
+
+  /* Bootstrap CSS variable overrides */
+  --bs-primary:          #3B82F6;
+  --bs-primary-rgb:      59, 130, 246;
+  --bs-secondary:        #22D3EE;
+  --bs-secondary-rgb:   34, 211, 238;
+  --bs-body-color:       #E2E8F0;
+  --bs-body-bg:          #0F172A;
+  --bs-link-color:       #22D3EE;
+  --bs-link-hover-color: #3B82F6;
+  --bs-border-color:     #334155;
+
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-light);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ============================================================
+   LIGHT THEME — Override dark variables
+   ============================================================ */
+.light-theme {
+  /* Light palette */
+  --color-bg-light:       #F8FAFC;
+  --color-bg-medium:      #E2E8F0;
+  --color-accent-medium:  #3B82F6;
+  --color-accent-dark:    #0EA5E9;
+  --color-bg-subtle:      #F1F5F9;
+
+  /* Text - darker for light background */
+  --color-text-primary:   #1E293B;
+  --color-text-secondary: #475569;
+  --color-text-muted:     #64748B;
+  --color-text-heading:   #0F172A;
+
+  /* Borders - lighter */
+  --color-border:         #CBD5E1;
+  --color-border-strong:  #94A3B8;
+
+  /* Gradients - lighter */
+  --gradient-primary: linear-gradient(135deg, #0EA5E9 0%, #3B82F6 100%);
+  --gradient-bg:      linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 100%);
+  --gradient-card:    linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%);
+
+  /* Shadows - lighter */
+  --shadow-primary: 0 4px 15px rgba(59, 130, 246, 0.15);
+  --shadow-card:    0 10px 30px rgba(15, 23, 42, 0.08);
+  --shadow-hover:   0 20px 40px rgba(59, 130, 246, 0.1);
+
+  /* Bootstrap overrides */
+  --bs-primary:          #3B82F6;
+  --bs-primary-rgb:      59, 130, 246;
+  --bs-secondary:        #0EA5E9;
+  --bs-secondary-rgb:   14, 165, 233;
+  --bs-body-color:       #1E293B;
+  --bs-body-bg:          #F8FAFC;
+  --bs-link-color:       #0EA5E9;
+  --bs-link-hover-color: #3B82F6;
+  --bs-border-color:     #CBD5E1;
+
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-light);
+}
+
+a {
+  font-weight: 500;
+  color: var(--color-accent-dark);
+  text-decoration: inherit;
+}
+a:hover {
+  color: var(--color-accent-medium);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--color-bg-light);
+}
+
+/* Light theme specific body overrides */
+.light-theme body {
+  background-color: var(--color-bg-light);
+}
+
+.light-theme .language-dropdown {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.light-theme .language-dropdown option {
+  background: #FFFFFF;
+  color: var(--color-text-primary);
+}
+
+.light-theme .login-container {
+  background: linear-gradient(135deg, #F8FAFC 0%, #E2E8F0 50%, #F1F5F9 100%);
+}
+
+.light-theme .liquid-form {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(14, 165, 233, 0.3);
+}
+
+.light-theme .login-container .form-input {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.light-theme .dashboard-header {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: var(--color-border);
+}
+
+.light-theme .upload-label {
+  background-color: rgba(255, 255, 255, 0.5);
+  border-color: var(--color-border-strong);
+}
+
+.light-theme .modal-content {
+  background: #FFFFFF;
+  border-color: var(--color-border);
+}
+
+.light-theme .user-management-table {
+  background: #FFFFFF;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  color: var(--color-text-heading);
+}
+
+/* Default native button (not Bootstrap) */
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--color-bg-medium);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: var(--color-accent-medium);
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}

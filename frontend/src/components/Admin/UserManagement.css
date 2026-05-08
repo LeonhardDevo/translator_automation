@@ -1,0 +1,92 @@
+/* UserManagement.css — Modern Blue/Slate Dark Theme */
+
+.user-management-container {
+  width: 100%;
+}
+
+.user-management-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1E293B;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.user-management-table th {
+  background: var(--gradient-primary);
+  padding: 16px;
+  text-align: left;
+  font-weight: 600;
+  color: white;
+  border-bottom: 2px solid var(--color-border-strong);
+}
+
+.user-management-table th.actions-header {
+  text-align: center;
+  width: 320px;
+}
+
+.user-management-table td {
+  padding: 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.user-management-table td.actions-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.user-management-table tr:hover {
+  background-color: rgba(34, 211, 238, 0.15);
+}
+
+/* Action buttons styling */
+.action-buttons {
+  display: inline-flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.action-buttons button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.action-buttons .edit-btn {
+  background: var(--gradient-primary);
+  color: white;
+}
+
+.action-buttons .edit-btn:hover {
+  background: var(--color-accent-dark);
+}
+
+.action-buttons .activate-btn {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: white;
+}
+
+.action-buttons .activate-btn:hover {
+  background: #059669;
+}
+
+.action-buttons .deactivate-btn {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  color: white;
+}
+
+.action-buttons .deactivate-btn:hover {
+  background: #D97706;
+}

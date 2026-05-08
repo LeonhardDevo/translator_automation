@@ -1,0 +1,28 @@
+node_modules
+npm-debug.log
+*.seed
+*.log
+.git
+.svn
+ CVS
+ .gitignore
+ .env.local
+ .env.development.local
+ .env.test.local
+ .env.production.local
+ .vscode
+ coverage
+ .nyc_output
+ .grunt
+ .lock-wscript
+ .wafpickle-N
+ *.swp
+ .DS_Store
+ .sass-cache
+ .idea
+ .vs
+ .history
+ .dockerignore
+ Dockerfile
+ README.md
+ !dist

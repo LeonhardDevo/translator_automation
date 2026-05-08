@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database service
+  db:
+    image: postgres:15-alpine
+    container_name: ai_translation_db
+    restart: always
+    environment:
+      POSTGRES_DB: translation_db
+      POSTGRES_USER: ai_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-ai_translation_password}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - ai_translation_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+
+  # Backend API service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ai_translation_backend
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql://ai_user:${DB_PASSWORD:-ai_translation_password}@db:5432/translation_db
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-a_very_long_random_secret_key_at_least_32_chars}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS:-}
+      - ENVIRONMENT=production
+      - HOST=0.0.0.0
+      - PORT=7999
+    ports:
+      - "7999:7999"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./output:/app/output
+      - ./logs:/app/logs
+    networks:
+      - ai_translation_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7999/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    security_opt:
+      - no-new-privileges:true
+
+  # Frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ai_translation_frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    networks:
+      - ai_translation_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  postgres_data:
+
+networks:
+  ai_translation_network:
+    driver: bridge
