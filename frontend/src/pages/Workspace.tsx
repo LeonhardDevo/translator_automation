@@ -53,7 +53,9 @@ const Workspace: React.FC = () => {
     ];
 
     // Check if folder has completed documents with output for ZIP download
-    const hasDocumentsWithOutput = folderDetails?.documents.some(doc => doc.has_output) ?? false;
+    const hasCompletedDocumentsWithOutput = folderDetails?.documents.some(
+        doc => doc.status === 'completed' && doc.has_output
+    ) ?? false;
 
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -383,15 +385,15 @@ const Workspace: React.FC = () => {
                             <button 
                                 className="btn" 
                                 onClick={() => handleDownloadZip(activeFolderId)} 
-                                disabled={!hasDocumentsWithOutput}
+                                disabled={!hasCompletedDocumentsWithOutput}
                                 style={{ 
-                                    background: hasDocumentsWithOutput ? 'var(--color-success)' : 'var(--color-bg-medium)', 
-                                    color: hasDocumentsWithOutput ? 'white' : 'var(--color-text-muted)', 
+                                    background: hasCompletedDocumentsWithOutput ? 'var(--color-success)' : 'var(--color-bg-medium)', 
+                                    color: hasCompletedDocumentsWithOutput ? 'white' : 'var(--color-text-muted)', 
                                     padding: '0.5rem 1rem', 
                                     borderRadius: '0.375rem', 
                                     border: 'none', 
-                                    cursor: hasDocumentsWithOutput ? 'pointer' : 'not-allowed',
-                                    opacity: hasDocumentsWithOutput ? 1 : 0.5
+                                    cursor: hasCompletedDocumentsWithOutput ? 'pointer' : 'not-allowed',
+                                    opacity: hasCompletedDocumentsWithOutput ? 1 : 0.5
                                 }}
                             >
                                 Download ZIP
@@ -487,8 +489,10 @@ const Workspace: React.FC = () => {
                                             {doc.status === 'completed' && doc.has_output && (
                                                 <button onClick={() => handleDownloadDoc(doc.id, doc.filename)} style={{ background: 'transparent', border: 'none', color: 'var(--color-accent-dark)', textDecoration: 'underline', fontWeight: 600, cursor: 'pointer', padding: 0, marginRight: '10px' }}>Download Doc</button>
                                             )}
-                                            {(doc.status === 'failed' || doc.status === 'pending' || (doc.status === 'completed' && !doc.has_output)) && (
-                                                <button onClick={() => handleRetryDoc(doc.id)} style={{ background: 'transparent', border: 'none', color: 'var(--color-warning)', textDecoration: 'underline', fontWeight: 600, cursor: 'pointer', padding: 0 }}>{doc.status === 'pending' ? 'Retry' : 'Retry Translation'}</button>
+                                            {(doc.status === 'failed' || doc.status === 'pending' || doc.status === 'processing' || (doc.status === 'completed' && !doc.has_output)) && (
+                                                <button onClick={() => handleRetryDoc(doc.id)} style={{ background: 'transparent', border: 'none', color: 'var(--color-warning)', textDecoration: 'underline', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                                                    {doc.status === 'pending' ? 'Retry' : doc.status === 'processing' ? 'Force Retry' : 'Retry Translation'}
+                                                </button>
                                             )}
                                         </td>
                                     </tr>

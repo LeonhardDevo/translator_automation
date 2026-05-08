@@ -230,10 +230,9 @@ const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
           </div>
           <p className="upload-status-text">
             {isUploading ? (
-              <span>{t('translate.uploading')} <span className="status-uploading">{t('translate.uploading')}</span></span>
+              <span className="status-uploading">{t('translate.uploading')}</span>
             ) : (
               <span>
-                {t('translate.processing')}
                 <span className={`status-${currentStatus?.status || 'processing'}`}>
                   {currentStatus?.status || t('translate.waiting')}
                 </span>

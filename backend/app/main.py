@@ -1,10 +1,9 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
+from .rate_limit import limiter
 import os
 
 from backend.logging_setup import setup_comprehensive_logging
@@ -13,15 +12,52 @@ from .scheduler import scheduler, start_scheduler, stop_scheduler
 
 setup_comprehensive_logging()
 
+def _recover_stuck_documents():
+    """Mark stale 'processing' docs as 'failed' so users can retry them.
+
+    Any document still in 'processing' at startup belongs to a worker thread
+    that died with the previous process — it cannot make progress.
+    """
+    from sqlmodel import Session, select
+    from .database import engine
+    from .models.document import Document
+    from .utils.safe_translator import _busy_api_keys, _busy_keys_lock
+
+    logger = logging.getLogger(__name__)
+    try:
+        with Session(engine) as session:
+            stuck = session.exec(
+                select(Document).where(Document.status == "processing")
+            ).all()
+            if not stuck:
+                return
+            for doc in stuck:
+                doc.status = "failed"
+                doc.error_message = (
+                    "Translation interrupted (server restarted while processing). "
+                    "Use Retry to run it again."
+                )
+                session.add(doc)
+            session.commit()
+            logger.warning(f"Recovered {len(stuck)} stuck 'processing' document(s) → 'failed'")
+        # Clear any leaked busy-key indices from the previous process.
+        with _busy_keys_lock:
+            _busy_api_keys.clear()
+    except Exception as e:
+        logger.error(f"Failed to recover stuck documents at startup: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger = logging.getLogger(__name__)
     logger.info("Starting up APScheduler...")
     if not scheduler.running:
         scheduler.start()
-        
+
+    _recover_stuck_documents()
+
     yield
-    
+
     logger.info("Shutting down APScheduler...")
     scheduler.shutdown()
 
@@ -40,7 +76,6 @@ app.add_middleware(
     allow_origin_regex=None,
 )
 
-limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 
 def _rate_limit_exceeded_handler(request, exc):

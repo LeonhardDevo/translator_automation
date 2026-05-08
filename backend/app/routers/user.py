@@ -1,20 +1,37 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPBearer
 from sqlmodel import Session, select
-from sqlalchemy import func, case
+from sqlalchemy import and_, func, or_
 from typing import List
 from ..database import get_session_context
 from ..security import get_current_user, get_current_user_or_admin
 from ..models.user import User
 from ..models.document import Document
 from ..models.pricing_models import UserSubscription, PricingPlan
-from ..crud.pricing_crud import get_usage_record
-from datetime import datetime, timedelta
+from datetime import datetime
 
 router = APIRouter()
 security = HTTPBearer()
 
 DAILY_LIMIT = 500
+
+
+def count_successful_translations(session: Session, user_id: int, subscription: UserSubscription | None = None) -> int:
+    filters = [
+        Document.user_id == user_id,
+        Document.status == "completed",
+    ]
+
+    if subscription:
+        period_start = subscription.start_date or subscription.created_at
+        filters.append(
+            or_(
+                Document.completed_at >= period_start,
+                and_(Document.completed_at.is_(None), Document.submitted_at >= period_start),
+            )
+        )
+
+    return session.exec(select(func.count(Document.id)).where(*filters)).one()
 
 @router.get("/dashboard")
 def get_user_dashboard(current_user_or_admin = Depends(get_current_user_or_admin), session: Session = Depends(get_session_context)):
@@ -29,12 +46,7 @@ def get_user_dashboard(current_user_or_admin = Depends(get_current_user_or_admin
         select(func.count(Document.id)).where(Document.user_id == current_user.id)
     ).one()
     
-    completed_docs = session.exec(
-        select(func.count(Document.id)).where(
-            Document.user_id == current_user.id,
-            Document.status == "completed"
-        )
-    ).one()
+    completed_docs = count_successful_translations(session, current_user.id)
     
     today = datetime.utcnow().date()
     start_of_day = datetime.combine(today, datetime.min.time())
@@ -64,8 +76,7 @@ def get_user_dashboard(current_user_or_admin = Depends(get_current_user_or_admin
             plan_name = plan.name
             plan_total_limit = plan.max_translation_count
     
-    usage_record = get_usage_record(session, current_user.id)
-    plan_usage = usage_record.translation_count if usage_record else 0
+    plan_usage = count_successful_translations(session, current_user.id, subscription) if subscription else 0
     
     return {
         "user_info": {

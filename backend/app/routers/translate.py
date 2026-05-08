@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Request
 from fastapi.security import HTTPBearer
 from sqlmodel import Session, select
 from sqlalchemy import func
@@ -10,6 +10,7 @@ from ..models.pricing_models import UserSubscription, PricingPlan
 from ..utils.safe_translator import SafeTranslator
 from ..utils.document_validator import validate_document_image
 from ..config import settings
+from ..rate_limit import limiter
 from ..utils.logging_util import log_api_call, log_translation_process, log_database_operation, log_error, log_security_event
 import tempfile
 import os
@@ -22,7 +23,9 @@ security = HTTPBearer()
 DAILY_LIMIT = 500
 
 @router.post("/upload")
+@limiter.limit("10/minute")
 def upload_document_for_translation(
+    request: Request,
     file: UploadFile = File(...),
     target_language: str = Form("Turkmen"),
     current_user=Depends(get_current_user),

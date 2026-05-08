@@ -1,15 +1,21 @@
 from pydantic_settings import BaseSettings
 import os
-import secrets
 from dotenv import load_dotenv
 from typing import Set
 
 load_dotenv()
 
+_jwt_secret = os.getenv("JWT_SECRET_KEY")
+if not _jwt_secret or len(_jwt_secret) < 32:
+    raise RuntimeError(
+        "JWT_SECRET_KEY environment variable is required and must be at least 32 characters. "
+        "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(32))\""
+    )
+
 
 class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./translation_app.db")
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", secrets.token_urlsafe(32))
+    JWT_SECRET_KEY: str = _jwt_secret
     JWT_ALGORITHM: str = os.getenv("JWT_ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
     

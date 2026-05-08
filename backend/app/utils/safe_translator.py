@@ -14,7 +14,6 @@ from docx.enum.section import WD_ORIENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 from ..config import settings
-from .api_key_manager import get_translation_api_key
 import time
 import re
 import random
@@ -113,45 +112,35 @@ class SafeTranslator:
     MAX_CODE_FIX_ATTEMPTS = 3
     
     def __init__(self, db_session=None, api_keys: list = None):
-        """Initialize the safe translator with API keys from database or provided list"""
+        """Initialize the safe translator with API keys from the database.
+
+        Keys are loaded from the `gemini_api_keys` table (only rows with
+        `is_active = True`). The optional `api_keys` parameter is supported
+        for tests/manual overrides only.
+        """
         if api_keys is not None:
             if isinstance(api_keys, str):
                 self.api_keys = [api_keys]
             else:
-                self.api_keys = api_keys
+                self.api_keys = list(api_keys)
+            if not self.api_keys:
+                raise ValueError("api_keys parameter was empty")
             logger.info(f"✓ Using {len(self.api_keys)} API keys from parameter")
-        elif db_session is not None:
-            from .api_key_manager import get_all_active_translation_api_keys
-            
-            db_api_keys = get_all_active_translation_api_keys(db_session)
-            
-            if db_api_keys and len(db_api_keys) > 0:
-                self.api_keys = db_api_keys
-                logger.info(f"✓ Loaded {len(self.api_keys)} API keys from database")
-            else:
-                logger.warning("⚠️  No API keys found in database, falling back to environment variables")
-                import os
-                from dotenv import load_dotenv
-                load_dotenv()
-                
-                gemini_api_keys_str = os.getenv('GEMINI_API_KEYS', '')
-                if gemini_api_keys_str:
-                    self.api_keys = [key.strip() for key in gemini_api_keys_str.split(',') if key.strip()]
-                    logger.info(f"✓ Loaded {len(self.api_keys)} API keys from environment variables")
-                else:
-                    fallback_key = getattr(settings, 'GEMINI_API_KEY', None)
-                    if fallback_key:
-                        self.api_keys = [fallback_key]
-                        logger.warning("⚠️  Using single fallback API key from settings")
-                    else:
-                        raise ValueError("❌ No API keys available for translation")
         else:
-            fallback_key = getattr(settings, 'GEMINI_API_KEY', None)
-            if fallback_key:
-                self.api_keys = [fallback_key]
-                logger.info("✓ Using fallback API key from settings")
-            else:
-                raise ValueError("❌ No API keys available for translation")
+            if db_session is None:
+                raise ValueError(
+                    "SafeTranslator requires a db_session to load API keys from the database"
+                )
+            from .api_key_manager import get_all_active_translation_api_keys
+
+            db_api_keys = get_all_active_translation_api_keys(db_session)
+            if not db_api_keys:
+                raise ValueError(
+                    "No active Gemini API keys found in the gemini_api_keys table. "
+                    "Add keys via the admin UI or run seed_api_keys.py."
+                )
+            self.api_keys = db_api_keys
+            logger.info(f"✓ Loaded {len(self.api_keys)} API keys from database")
         
         self.selected_key_index = self._get_available_api_key_index()
         self.api_key = self.api_keys[self.selected_key_index]

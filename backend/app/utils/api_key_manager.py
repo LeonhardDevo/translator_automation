@@ -49,28 +49,14 @@ class ApiKeyManager:
 
 def get_translation_api_key(db: Session) -> Optional[str]:
     """
-    Get an appropriate API key for translation tasks
+    Get an appropriate API key for translation tasks from the database.
+
+    Returns the raw key string of the active Gemini API key with the lowest
+    usage count, or None if no active keys exist.
     """
     manager = ApiKeyManager(db)
     api_key = manager.get_valid_api_key()
-    
-    if api_key:
-        import os
-        from dotenv import load_dotenv
-        load_dotenv()
-        
-        gemini_api_keys_str = os.getenv('GEMINI_API_KEYS', '')
-        if gemini_api_keys_str:
-            api_keys = [key.strip() for key in gemini_api_keys_str.split(',') if key.strip()]
-            if api_keys:
-                return api_keys[0]
-    
-    from backend.app.config import settings
-    fallback_key = getattr(settings, 'GEMINI_API_KEY', None)
-    if fallback_key:
-        return fallback_key
-    
-    return None
+    return api_key.key if api_key else None
 
 def get_all_active_translation_api_keys(db: Session) -> list[str]:
     """

@@ -271,8 +271,25 @@ import zipfile
 import tempfile
 from fastapi.responses import FileResponse, StreamingResponse
 import io
+import re
 
 DAILY_LIMIT = 500
+
+
+def _safe_zip_docx_name(doc: Document, used_names: set[str]) -> str:
+    original_stem = Path(doc.filename).stem or f"document_{doc.id}"
+    safe_stem = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', "_", original_stem).strip(" ._")
+    if not safe_stem:
+        safe_stem = f"document_{doc.id}"
+
+    output_name = f"translated_{safe_stem}.docx"
+    if output_name not in used_names:
+        used_names.add(output_name)
+        return output_name
+
+    output_name = f"translated_{safe_stem}_{doc.id}.docx"
+    used_names.add(output_name)
+    return output_name
 
 @router.post("/{folder_id}/upload")
 def upload_documents_to_folder(
@@ -625,14 +642,13 @@ def download_folder_zip(
     if not valid_docs:
         raise HTTPException(status_code=404, detail="Completed documents exist but output files are missing or empty. Please try processing the folder again.")
 
-    # Create ZIP in memory - use original filename for better identification
+    # Create ZIP in memory using the same translated filename convention as single downloads.
     zip_buffer = io.BytesIO()
+    used_names = set()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for doc in valid_docs:
             if doc.output_filepath and Path(doc.output_filepath).exists():
-                # Use original filename without 'translated_' prefix for cleaner naming
-                base_name = doc.filename.replace(Path(doc.filename).suffix, '')
-                output_name = f"{base_name}_{doc.target_language}.docx"
+                output_name = _safe_zip_docx_name(doc, used_names)
                 zipf.write(doc.output_filepath, arcname=f"translated/{output_name}")
     
     zip_buffer.seek(0)
@@ -640,10 +656,6 @@ def download_folder_zip(
     # Return as streaming response with explicit headers
     headers = {
         "Content-Disposition": f"attachment; filename=folder_{folder_id}_translations.zip",
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "*",
-        "Access-Control-Expose-Headers": "Content-Disposition",
     }
     
     return StreamingResponse(
