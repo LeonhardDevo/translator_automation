@@ -1,0 +1,62 @@
+name: Security Scanning
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Run daily at 2 AM
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Secret scanning
+      - name: Secret Scanning
+        uses: trufflesecurity/truffleHog@v3.49.0
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          extra_args: --only-verified
+
+      # Dependency scanning
+      - name: Dependency Scanning
+        uses: github/super-linter@v4
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: true
+
+      # Backend security scan
+      - name: Backend Security Scan
+        run: |
+          pip install bandit safety
+          bandit -r backend/ -ll
+          safety check -r requirements.txt
+
+      # Frontend security scan
+      - name: Frontend Security Scan
+        run: |
+          cd frontend
+          npm audit --audit-level high
+
+      # Container security scan
+      - name: Container Security Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+        continue-on-error: true
+
+      # Upload SARIF file
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: trivy-results.sarif

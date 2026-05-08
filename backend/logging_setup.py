@@ -1,21 +1,21 @@
-"""
-Centralized logging setup for AI Translation Service
-Creates comprehensive logs of all backend operations in the logs directory
-"""
 import logging
-import sys
-from pathlib import Path
-from datetime import datetime
-from pythonjsonlogger import jsonlogger
 import os
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
 
-# Create logs directory if it doesn't exist
-LOGS_DIR = Path("logs")
-LOGS_DIR.mkdir(exist_ok=True)
+from pythonjsonlogger import jsonlogger
+
+APP_LOGGER_NAME = "ai_translation_service"
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_LOGS_DIR = PROJECT_ROOT / "logs"
+
+_LOGGING_CONFIGURED = False
 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def add_fields(self, log_record, record, message_dict):
-        super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+        super().add_fields(log_record, record, message_dict)
         if not log_record.get('timestamp'):
             log_record['timestamp'] = datetime.fromtimestamp(record.created).isoformat()
         if log_record.get('level'):
@@ -23,123 +23,93 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         if record.exc_info:
             log_record['exception'] = self.formatException(record.exc_info)
 
-def setup_comprehensive_logging():
-    """Setup comprehensive logging to capture all backend operations in the logs directory"""
-    
-    # Create a general log file for all operations (one per day)
-    general_log_file = LOGS_DIR / f"backend_operations_{datetime.now().strftime('%Y%m%d')}.log"
-    
-    # Get the root logger
+def _resolve_logs_dir(logs_dir: Optional[Path] = None) -> Path:
+    configured_dir = logs_dir or os.getenv("BACKEND_LOG_DIR") or DEFAULT_LOGS_DIR
+    resolved_dir = Path(configured_dir).expanduser()
+
+    if not resolved_dir.is_absolute():
+        resolved_dir = PROJECT_ROOT / resolved_dir
+
+    return resolved_dir.resolve()
+
+
+def _mark_managed(handler: logging.Handler) -> logging.Handler:
+    setattr(handler, "_ai_translation_managed", True)
+    return handler
+
+
+def _remove_managed_handlers(logger: logging.Logger) -> None:
+    for handler in logger.handlers[:]:
+        if getattr(handler, "_ai_translation_managed", False):
+            logger.removeHandler(handler)
+            handler.close()
+
+
+def _create_file_handler(log_file: Path, formatter: logging.Formatter) -> Optional[logging.Handler]:
+    try:
+        handler = _mark_managed(
+            logging.FileHandler(log_file, mode='a', encoding='utf-8')
+        )
+    except OSError as exc:
+        logging.getLogger(APP_LOGGER_NAME).warning(
+            "File logging disabled for %s: %s", log_file, exc
+        )
+        return None
+
+    handler.setFormatter(formatter)
+    return handler
+
+
+def setup_comprehensive_logging(logs_dir: Optional[Path] = None) -> logging.Logger:
+    """Configure backend logging once, writing all files to the central logs directory."""
+    global _LOGGING_CONFIGURED
+
+    app_logger = logging.getLogger(APP_LOGGER_NAME)
+    if _LOGGING_CONFIGURED:
+        return app_logger
+
+    resolved_logs_dir = _resolve_logs_dir(logs_dir)
+    resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+    date_suffix = datetime.now().strftime('%Y%m%d')
+    general_log_file = resolved_logs_dir / f"backend_operations_{date_suffix}.log"
+    structured_log_file = resolved_logs_dir / f"structured_backend_log_{date_suffix}.json"
+
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.INFO)
-    
-    # Remove any existing handlers to avoid duplicates
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-    
-    # Create file handler for comprehensive logging (append mode to add to existing daily file)
-    file_handler = logging.FileHandler(general_log_file, mode='a', encoding='utf-8')
-    file_formatter = logging.Formatter(
+    _remove_managed_handlers(root_logger)
+    app_logger.setLevel(logging.INFO)
+    app_logger.propagate = True
+
+    text_formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
     )
-    file_handler.setFormatter(file_formatter)
-    
-    # Create console handler for real-time monitoring
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    console_handler.setFormatter(console_formatter)
-    
-    # Add handlers to root logger
-    root_logger.addHandler(file_handler)
+
+    console_handler = _mark_managed(logging.StreamHandler(sys.stdout))
+    console_handler.setFormatter(text_formatter)
     root_logger.addHandler(console_handler)
-    
-    # Also create a specific logger for the application
-    app_logger = logging.getLogger("ai_translation_service")
-    
-    # Create structured log file for detailed operations (one per day)
-    structured_log_file = LOGS_DIR / f"structured_backend_log_{datetime.now().strftime('%Y%m%d')}.json"
-    
-    # Check if structured handler already exists to prevent duplicates
-    existing_handlers = [h for h in app_logger.handlers if isinstance(h, logging.FileHandler)]
-    for handler in existing_handlers:
-        app_logger.removeHandler(handler)
-    
-    # Create structured log handler in append mode
-    structured_handler = logging.FileHandler(structured_log_file, mode='a', encoding='utf-8')
+
+    file_handler = _create_file_handler(general_log_file, text_formatter)
+    if file_handler:
+        root_logger.addHandler(file_handler)
+        os.environ['CURRENT_BACKEND_LOG'] = str(general_log_file)
+
     structured_formatter = CustomJsonFormatter(
         '%(timestamp)s %(level)s %(name)s %(message)s %(correlation_id)s %(user_id)s %(request_id)s'
     )
-    structured_handler.setFormatter(structured_formatter)
-    app_logger.addHandler(structured_handler)
-    
-    # Store log file paths in environment for reference
-    os.environ['CURRENT_BACKEND_LOG'] = str(general_log_file)
-    os.environ['CURRENT_STRUCTURED_LOG'] = str(structured_log_file)
-    
+    structured_handler = _create_file_handler(structured_log_file, structured_formatter)
+    if structured_handler:
+        root_logger.addHandler(structured_handler)
+        os.environ['CURRENT_STRUCTURED_LOG'] = str(structured_log_file)
+
+    _LOGGING_CONFIGURED = True
     app_logger.info("Comprehensive logging initialized", extra={
-        'log_file': str(general_log_file),
-        'structured_log_file': str(structured_log_file)
+        'log_file': os.environ.get('CURRENT_BACKEND_LOG'),
+        'structured_log_file': os.environ.get('CURRENT_STRUCTURED_LOG')
     })
-    
-    return app_logger
-    
-    # Get the root logger
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    
-    # Remove any existing handlers to avoid duplicates
-    for handler in root_logger.handlers[:]:
-        root_logger.removeHandler(handler)
-    
-    # Create file handler for comprehensive logging
-    file_handler = logging.FileHandler(general_log_file, encoding='utf-8')
-    file_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    file_handler.setFormatter(file_formatter)
-    
-    # Create console handler for real-time monitoring
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    console_handler.setFormatter(console_formatter)
-    
-    # Add handlers to root logger
-    root_logger.addHandler(file_handler)
-    root_logger.addHandler(console_handler)
-    
-    # Also create a specific logger for the application
-    app_logger = logging.getLogger("ai_translation_service")
-    
-    # Create structured log file for detailed operations
-    structured_log_file = LOGS_DIR / f"structured_backend_log_{datetime.now().strftime('%Y%m%d')}.json"
-    structured_handler = logging.FileHandler(structured_log_file, encoding='utf-8')
-    structured_formatter = CustomJsonFormatter(
-        '%(timestamp)s %(level)s %(name)s %(message)s %(correlation_id)s %(user_id)s %(request_id)s'
-    )
-    structured_handler.setFormatter(structured_formatter)
-    app_logger.addHandler(structured_handler)
-    
-    # Store log file paths in environment for reference
-    os.environ['CURRENT_BACKEND_LOG'] = str(general_log_file)
-    os.environ['CURRENT_STRUCTURED_LOG'] = str(structured_log_file)
-    
-    app_logger.info("Comprehensive logging initialized", extra={
-        'log_file': str(general_log_file),
-        'structured_log_file': str(structured_log_file)
-    })
-    
+
     return app_logger
 
 def get_logger(name: str = "ai_translation_service"):
     """Get a configured logger instance"""
-    logger = logging.getLogger(name)
-    if not logger.handlers:
-        # If no handlers are configured, set up basic logging to avoid "No handlers" warning
-        handler = logging.NullHandler()
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-    return logger
+    return logging.getLogger(name)

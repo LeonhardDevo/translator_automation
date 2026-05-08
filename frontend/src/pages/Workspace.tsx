@@ -53,7 +53,6 @@ const Workspace: React.FC = () => {
     ];
 
     // Check if folder has completed documents with output for ZIP download
-    const hasCompletedDocuments = folderDetails?.documents.some(doc => doc.status === 'completed') ?? false;
     const hasDocumentsWithOutput = folderDetails?.documents.some(doc => doc.has_output) ?? false;
 
     const navigate = useNavigate();
@@ -317,24 +316,6 @@ const Workspace: React.FC = () => {
             alert(err.response?.data?.detail || 'Failed to upload ZIP');
         } finally {
             if (zipInputRef.current) zipInputRef.current.value = '';
-            setLoading(false);
-        }
-    };
-
-    const handleSequentialProcess = async () => {
-        if (!activeFolderId) return;
-        
-        try {
-            setLoading(true);
-            const response = await apiClient.post(`/workspace/${activeFolderId}/process-sequential`, {
-                target_language: targetLanguage
-            });
-            alert(`Processing complete: ${response.data.completed} completed, ${response.data.failed} failed`);
-            fetchFolderDetails(activeFolderId);
-        } catch (err: any) {
-            console.error(err);
-            alert(err.response?.data?.detail || 'Failed to start sequential processing');
-        } finally {
             setLoading(false);
         }
     };
