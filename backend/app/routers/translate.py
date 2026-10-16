@@ -20,6 +20,7 @@ from datetime import datetime
 router = APIRouter()
 security = HTTPBearer()
 
+ALLOWED_LANGUAGES = ["Turkmen", "Russian", "English", "Turkish", "Spanish", "French", "German", "Italian", "Chinese", "Japanese", "Korean", "Arabic"]
 DAILY_LIMIT = 500
 
 @router.post("/upload")
@@ -33,6 +34,12 @@ def upload_document_for_translation(
 ):
     """Upload a document for translation"""
     try:
+        if target_language not in ALLOWED_LANGUAGES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid target language. Allowed languages: {', '.join(ALLOWED_LANGUAGES)}"
+            )
+
         log_api_call("/translate/upload", "POST", current_user.id, {
             "filename": file.filename,
             "target_language": target_language,

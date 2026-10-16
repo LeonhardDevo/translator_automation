@@ -648,6 +648,3 @@ For support or questions:
 - **Documentation**: For non-security related issues, use the standard support channels
 
 ---
-
-*This document should be reviewed and updated quarterly or when significant changes occur to the application or infrastructure.*#   t r a n s l a t o r _ a u t o m a t i o n  
- 

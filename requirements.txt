@@ -4,19 +4,19 @@ uvicorn==0.32.0
 sqlmodel==0.0.22
 psycopg2-binary==2.9.10
 python-jose[cryptography]==3.3.0
-pwdlib[argon2]>=0.1.0   # для хеширования паролей (Argon2)
-passlib[bcrypt]==1.7.4  # for password hashing context
+pwdlib[argon2]>=0.1.0    
+passlib[bcrypt]==1.7.4   
 alembic==1.13.3
-slowapi==0.1.9          # for rate limiting
-python-multipart==0.0.22 # for file upload handling
-python-docx==1.1.2      # for document generation
-google-genai>=1.59.0      # updated Google AI SDK
-gunicorn==23.0.0        # for production WSGI server
-python-dotenv==1.0.1    # for environment variable management
-python-json-logger==4.0.0  # for structured logging
-pytesseract==0.3.13        # for OCR operations
-Pillow==12.1.0             # for image processing
-opencv-python==4.10.0.84   # for image processing
+slowapi==0.1.9          
+python-multipart==0.0.22  
+python-docx==1.1.2      
+google-genai>=1.59.0    
+gunicorn==23.0.0        
+python-dotenv==1.0.1     
+python-json-logger==4.0.0  
+pytesseract==0.3.13        
+Pillow==12.1.0             
+opencv-python==4.10.0.84   
 pydantic-settings>=2.0.0
 apscheduler>=3.10.4
 email-validator>=2.0.0

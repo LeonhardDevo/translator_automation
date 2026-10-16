@@ -3,6 +3,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Tuple
 import json
+import ast
 from google import genai
 from PIL import Image
 import io
@@ -56,7 +57,7 @@ from backend.logging_setup import get_logger
 logger = get_logger(__name__)
 
 # Global tracking for busy API keys
-_busy_api_keys = set()
+_busy_api_keys = {} # dict mapping key_index to cooldown expiration timestamp (float)
 _busy_keys_lock = Lock()
 
 
@@ -70,21 +71,28 @@ def _claim_api_key_index(api_keys: list) -> int:
         The index of the claimed key (already marked busy in _busy_api_keys).
     """
     global _busy_api_keys, _busy_keys_lock
+    import time
     num_keys = len(api_keys)
+    current_time = time.time()
     
     with _busy_keys_lock:
+        # Clean up expired cooldowns
+        expired_keys = [k for k, v in _busy_api_keys.items() if v <= current_time]
+        for k in expired_keys:
+            del _busy_api_keys[k]
+
         # Get all available indices (not currently busy)
         available_indices = [i for i in range(num_keys) if i not in _busy_api_keys]
         
         if available_indices:
             # Randomly select from available keys
             selected_index = random.choice(available_indices)
-            _busy_api_keys.add(selected_index)
+            _busy_api_keys[selected_index] = current_time + 60 # Default 60s busy time
             return selected_index
         
         # All keys are busy — randomly select one anyway
         selected_index = random.randint(0, num_keys - 1)
-        _busy_api_keys.add(selected_index)
+        _busy_api_keys[selected_index] = current_time + 60
         return selected_index
 
 Document = DocxDocument
@@ -159,7 +167,13 @@ class SafeTranslator:
         elapsed_time = 0
         
         while elapsed_time < max_wait_time:
+            current_time = time.time()
             with _busy_keys_lock:
+                # Clean up expired cooldowns
+                expired_keys = [k for k, v in _busy_api_keys.items() if v <= current_time]
+                for k in expired_keys:
+                    del _busy_api_keys[k]
+
                 available_indices = []
                 for i in range(len(self.api_keys)):
                     if i not in _busy_api_keys:
@@ -167,7 +181,7 @@ class SafeTranslator:
                 
                 if available_indices:
                     selected_index = random.choice(available_indices)
-                    _busy_api_keys.add(selected_index)
+                    _busy_api_keys[selected_index] = current_time + 60 # Default busy
                     return selected_index
             
             # Wait outside the lock to avoid blocking other threads
@@ -176,26 +190,28 @@ class SafeTranslator:
         
         # If we've waited too long and still no keys available, use round-robin
         logger.warning("Max wait time exceeded, using round-robin selection for API key")
+        current_time = time.time()
         # Use a simple round-robin approach without locking for too long
         for i in range(len(self.api_keys)):
             with _busy_keys_lock:
                 if i not in _busy_api_keys:
-                    _busy_api_keys.add(i)
+                    _busy_api_keys[i] = current_time + 60
                     return i
         
         # If all are still busy, use the first key anyway
         logger.warning("All API keys appear to be busy, using first key after timeout")
         with _busy_keys_lock:
-            _busy_api_keys.add(0)
+            _busy_api_keys[0] = time.time() + 60
         return 0
 
     def _rotate_api_key(self):
         """Rotate to the next API key in round-robin fashion"""
         global _busy_api_keys, _busy_keys_lock
+        import time
         old_index = self.selected_key_index
         
         with _busy_keys_lock:
-            _busy_api_keys.discard(old_index)
+            _busy_api_keys.pop(old_index, None)
         
         self.selected_key_index = self._get_available_api_key_index()
         self.api_key = self.api_keys[self.selected_key_index]
@@ -301,10 +317,19 @@ class SafeTranslator:
             - On failure:  (False, "the actual error string")
         """
         try:
+            try:
+                tree = ast.parse(code)
+                for node in ast.walk(tree):
+                    if isinstance(node, (ast.Import, ast.ImportFrom)):
+                        return (False, "Code execution rejected: Import statements are not allowed for security reasons.")
+                    if isinstance(node, ast.Call):
+                        if isinstance(node.func, ast.Name) and node.func.id in ['open', 'eval', 'exec', '__import__', 'getattr', 'setattr', 'delattr']:
+                            return (False, f"Code execution rejected: Dangerous function call '{node.func.id}' is not allowed.")
+            except SyntaxError as e:
+                return (False, f"Syntax error in generated code: {e}")
+
             safe_globals = {
                 '__builtins__': {
-                    '__import__': __import__,
-                    '__build_class__': __build_class__,
                     'print': print,
                     'len': len,
                     'range': range,
@@ -396,7 +421,6 @@ class SafeTranslator:
                 'UnicodeDecodeError': UnicodeDecodeError,
                 'UnicodeEncodeError': UnicodeEncodeError,
                 'print': print,
-                'open': open,
             }
 
             logger.debug(f"Executing code ({len(code)} chars):\n{code[:500]}...")
@@ -681,6 +705,8 @@ class SafeTranslator:
                         if is_quota_error:
                             logger.warning(f"[ROTATION] Quota exhausted for key #{key_index + 1} on model={model_name}. Marking key as exhausted.")
                             exhausted_key_indices.add(key_index)
+                            with _busy_keys_lock:
+                                _busy_api_keys[key_index] = time.time() + 600 # 10 minute cooldown
                             break  # Skip remaining retries for this key+model, try next key
                         else:
                             if attempt < max_retries - 1:
@@ -803,7 +829,7 @@ class SafeTranslator:
             
             # Release the key from busy state
             with _busy_keys_lock:
-                _busy_api_keys.discard(api_key_index)
+                _busy_api_keys.pop(api_key_index, None)
             
             # Restore original key
             self.selected_key_index = original_selected_key_index
@@ -815,7 +841,7 @@ class SafeTranslator:
         except Exception as e:
             # Release the key from busy state even if there's an error
             with _busy_keys_lock:
-                _busy_api_keys.discard(api_key_index)
+                _busy_api_keys.pop(api_key_index, None)
             logger.error(f"Error in single API key translation: {e}")
             return False
         
@@ -825,7 +851,7 @@ class SafeTranslator:
         try:
             if hasattr(self, 'selected_key_index'):
                 with _busy_keys_lock:
-                    _busy_api_keys.discard(self.selected_key_index)
+                    _busy_api_keys.pop(self.selected_key_index, None)
                     logger.info(f"Released API key #{self.selected_key_index + 1} from busy state")
         except:
             pass
@@ -857,7 +883,7 @@ def process_translation_background(document_id: int, api_key_index: int = None, 
            # Release the key immediately if we can't find the document
            if api_key_index is not None:
                with _busy_keys_lock:
-                   _busy_api_keys.discard(api_key_index)
+                   _busy_api_keys.pop(api_key_index, None)
            return
        
        # Override language if a new one was passed in
@@ -879,7 +905,7 @@ def process_translation_background(document_id: int, api_key_index: int = None, 
            if api_key_index is not None and api_key_index < len(translator.api_keys):
                # Release the key the translator picked during __init__
                with _busy_keys_lock:
-                   _busy_api_keys.discard(translator.selected_key_index)
+                   _busy_api_keys.pop(translator.selected_key_index, None)
                # Switch to the pre-assigned key
                translator.selected_key_index = api_key_index
                translator.api_key = translator.api_keys[api_key_index]
@@ -933,7 +959,7 @@ def process_translation_background(document_id: int, api_key_index: int = None, 
                logger.error(f"Document validation failed for {input_path}")
                # Release the key
                with _busy_keys_lock:
-                   _busy_api_keys.discard(translator.selected_key_index)
+                   _busy_api_keys.pop(translator.selected_key_index, None)
                return
            
            success = translator.translate_image_to_document(
@@ -981,7 +1007,7 @@ def process_translation_background(document_id: int, api_key_index: int = None, 
            # Release this document's API key
            if translator is not None and hasattr(translator, 'selected_key_index'):
                with _busy_keys_lock:
-                   _busy_api_keys.discard(translator.selected_key_index)
+                   _busy_api_keys.pop(translator.selected_key_index, None)
            
        except Exception as e:
            document.status = "failed"
@@ -991,11 +1017,11 @@ def process_translation_background(document_id: int, api_key_index: int = None, 
            
            if translator is not None and hasattr(translator, 'selected_key_index'):
                with _busy_keys_lock:
-                   _busy_api_keys.discard(translator.selected_key_index)
+                   _busy_api_keys.pop(translator.selected_key_index, None)
            elif api_key_index is not None:
                # Translator was never created; release the pre-assigned key
                with _busy_keys_lock:
-                   _busy_api_keys.discard(api_key_index)
+                   _busy_api_keys.pop(api_key_index, None)
            
            log_error("process_translation_background", e, document.user_id, {"document_id": document_id})
            log_translation_process(document_id, document.user_id, document.filename, document.target_language, "failed", str(e))
