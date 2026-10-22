@@ -637,7 +637,7 @@ terraform destroy
 
 ## License
 
-This project is licensed under the MIT License.
+MIT — see [LICENSE](LICENSE).
 
 ## Contact Information
 
