@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiClient from '../../api/axiosInstance';
 import '../../App.css';
+import { getErrorMessage } from '../../utils/errors';
 
 interface PricingPlan {
   id: number;
@@ -68,9 +69,9 @@ const ManagePricingPlans: React.FC = () => {
       setEditingPlan(null);
       setShowForm(false);
       fetchPricingPlans();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error saving pricing plan:', error);
-      alert(`Failed to ${editingPlan ? 'update' : 'create'} pricing plan: ${error.response?.data?.detail || error.message}`);
+      alert(`Failed to ${editingPlan ? 'update' : 'create'} pricing plan: ${getErrorMessage(error, 'Unknown error')}`);
     }
   };
 
@@ -95,9 +96,9 @@ const ManagePricingPlans: React.FC = () => {
       await apiClient.delete(`/pricing/pricing-plans/${planId}`);
       alert('Pricing plan deleted successfully');
       fetchPricingPlans();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error deleting pricing plan:', error);
-      alert(`Failed to delete pricing plan: ${error.response?.data?.detail || error.message}`);
+      alert(`Failed to delete pricing plan: ${getErrorMessage(error, 'Unknown error')}`);
     }
   };
 

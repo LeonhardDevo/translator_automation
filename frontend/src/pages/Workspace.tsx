@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiFolder, FiArrowLeft, FiTrash2, FiClock, FiRefreshCw } from 'react-icons/fi';
+import axios from 'axios';
 import apiClient from '../api/axiosInstance';
+import { getErrorMessage } from '../utils/errors';
 import ThemeToggle from '../components/ThemeToggle';
 import '../App.css';
 
@@ -153,7 +155,7 @@ const Workspace: React.FC = () => {
                 alert(`Sequential processing: ${response.data.completed} completed, ${response.data.failed} failed`);
                 fetchFolderDetails(activeFolderId);
             } else {
-                let payload: any = { scheduled_for: null, target_language: targetLanguage };
+                const payload: { scheduled_for: string | null; target_language: string } = { scheduled_for: null, target_language: targetLanguage };
                 if (scheduleTime) {
                     payload.scheduled_for = new Date(scheduleTime).toISOString();
                 }
@@ -199,9 +201,9 @@ const Workspace: React.FC = () => {
             });
             // Refresh folder details after upload
             fetchFolderDetails(activeFolderId);
-        } catch (err: any) {
+        } catch (err) {
             console.error(err);
-            alert(err.response?.data?.detail || 'Failed to upload documents');
+            alert(getErrorMessage(err, 'Failed to upload documents'));
         } finally {
             if (fileInputRef.current) fileInputRef.current.value = '';
             setLoading(false);
@@ -232,16 +234,15 @@ const Workspace: React.FC = () => {
             } else {
                 alert('No completed documents to download.');
             }
-        } catch (e: any) {
+        } catch (e) {
             console.error('Download failed', e);
-            // Check if there's a response with error detail
-            if (e.response?.data) {
+            const responseData = axios.isAxiosError(e) ? e.response?.data : undefined;
+            if (responseData) {
                 try {
-                    const errorBlob = e.response.data;
-                    const errorText = await new Response(errorBlob).text();
+                    const errorText = await new Response(responseData).text();
                     alert(errorText || 'Download failed');
                 } catch {
-                    alert(e.response.data?.detail || 'Download failed');
+                    alert(getErrorMessage(e, 'Download failed'));
                 }
             } else {
                 alert('No completed documents to download, or an error occurred.');
@@ -273,15 +274,15 @@ const Workspace: React.FC = () => {
             } else {
                 alert('Failed to download the document - empty response.');
             }
-        } catch (e: any) {
+        } catch (e) {
             console.error('Download failed', e);
-            if (e.response?.data) {
+            const responseData = axios.isAxiosError(e) ? e.response?.data : undefined;
+            if (responseData) {
                 try {
-                    const errorBlob = e.response.data;
-                    const errorText = await new Response(errorBlob).text();
+                    const errorText = await new Response(responseData).text();
                     alert(errorText || 'Download failed');
                 } catch {
-                    alert(e.response.data?.detail || 'Download failed');
+                    alert(getErrorMessage(e, 'Download failed'));
                 }
             } else {
                 alert('Failed to download the document.');
@@ -313,9 +314,9 @@ const Workspace: React.FC = () => {
             });
             alert(response.data.message);
             fetchFolderDetails(activeFolderId);
-        } catch (err: any) {
+        } catch (err) {
             console.error(err);
-            alert(err.response?.data?.detail || 'Failed to upload ZIP');
+            alert(getErrorMessage(err, 'Failed to upload ZIP'));
         } finally {
             if (zipInputRef.current) zipInputRef.current.value = '';
             setLoading(false);

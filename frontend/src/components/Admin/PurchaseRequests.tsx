@@ -4,6 +4,7 @@ import './PurchaseRequests.css';
 import type { PurchaseRequest } from '../../types';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { FiRefreshCw, FiClock, FiCheckCircle, FiXCircle, FiClipboard, FiInbox, FiCheck, FiX } from 'react-icons/fi';
+import { getErrorMessage } from '../../utils/errors';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -43,9 +44,9 @@ const PurchaseRequests: React.FC = () => {
         const errorData = response.data;
         alert(`[ERROR] Error: ${errorData.detail}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error approving subscription:', error);
-      alert(`[ERROR] Error approving subscription: ${error.response?.data?.detail || error.message}`);
+      alert(`[ERROR] Error approving subscription: ${getErrorMessage(error, 'Unknown error')}`);
     }
   };
 
@@ -62,9 +63,9 @@ const PurchaseRequests: React.FC = () => {
         const errorData = response.data;
         alert(`[ERROR] Error: ${errorData.detail}`);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error rejecting subscription:', error);
-      alert(`[ERROR] Error rejecting subscription: ${error.response?.data?.detail || error.message}`);
+      alert(`[ERROR] Error rejecting subscription: ${getErrorMessage(error, 'Unknown error')}`);
     }
   };
 

@@ -9,7 +9,7 @@ interface UsagePoint {
   count: number;
 }
 
-interface UsageAnalyticsData {
+export interface UsageAnalyticsData {
   daily_usage?: UsagePoint[];
   weekly_usage?: UsagePoint[];
   monthly_usage?: UsagePoint[];
@@ -34,6 +34,33 @@ const getThemeColors = (theme: 'dark' | 'light') => ({
   tooltipText: theme === 'dark' ? '#E2E8F0' : '#1E293B',
 });
 
+type ThemeColors = ReturnType<typeof getThemeColors>;
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: Array<{ value?: number }>;
+  label?: string;
+  colors: ThemeColors;
+}
+
+const CustomTooltip = ({ active, payload, label, colors }: CustomTooltipProps) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        backgroundColor: colors.tooltipBg,
+        border: `1px solid ${colors.tooltipBorder}`,
+        borderRadius: '8px',
+        padding: '10px',
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
+      }}>
+        <p style={{ color: colors.tooltipText, margin: '0 0 5px 0', fontWeight: 600 }}>{label}</p>
+        <p style={{ color: colors.accent, margin: 0 }}>{`Usage: ${payload[0]?.value || 0}`}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const UsageAnalyticsChart: React.FC<UsageAnalyticsChartProps> = ({ usageData, theme = 'dark' }) => {
   const colors = getThemeColors(theme);
 
@@ -54,25 +81,6 @@ const UsageAnalyticsChart: React.FC<UsageAnalyticsChartProps> = ({ usageData, th
     month: item.month ? new Date(item.month).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : 'N/A',
     count: item.count
   })) || [];
-
-  // Custom tooltip based on theme
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{ 
-          backgroundColor: colors.tooltipBg, 
-          border: `1px solid ${colors.tooltipBorder}`, 
-          borderRadius: '8px', 
-          padding: '10px',
-          boxShadow: '0 4px 15px rgba(0, 0, 0, 0.2)'
-        }}>
-          <p style={{ color: colors.tooltipText, margin: '0 0 5px 0', fontWeight: 600 }}>{label}</p>
-          <p style={{ color: colors.accent, margin: 0 }}>{`Usage: ${payload[0]?.value || 0}`}</p>
-        </div>
-      );
-    }
-    return null;
-  };
 
   const chartContainerStyle = {
     backgroundColor: colors.background,
@@ -97,7 +105,7 @@ const UsageAnalyticsChart: React.FC<UsageAnalyticsChartProps> = ({ usageData, th
                 <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                 <XAxis dataKey="date" stroke={colors.textSecondary} tick={{ fill: colors.textSecondary }} />
                 <YAxis stroke={colors.textSecondary} tick={{ fill: colors.textSecondary }} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip colors={colors} />} />
                 <Legend wrapperStyle={{ color: colors.text }} />
                 <Bar dataKey="count" name="Usage Count" fill={colors.accent} radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -114,7 +122,7 @@ const UsageAnalyticsChart: React.FC<UsageAnalyticsChartProps> = ({ usageData, th
                 <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                 <XAxis dataKey="week" stroke={colors.textSecondary} tick={{ fill: colors.textSecondary }} />
                 <YAxis stroke={colors.textSecondary} tick={{ fill: colors.textSecondary }} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip colors={colors} />} />
                 <Legend wrapperStyle={{ color: colors.text }} />
                 <Line type="monotone" dataKey="count" name="Usage Count" stroke={colors.accentSecondary} strokeWidth={2} dot={{ r: 4, fill: colors.accentSecondary }} activeDot={{ r: 6, fill: colors.accent }} />
               </LineChart>
@@ -131,7 +139,7 @@ const UsageAnalyticsChart: React.FC<UsageAnalyticsChartProps> = ({ usageData, th
                 <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                 <XAxis dataKey="month" stroke={colors.textSecondary} tick={{ fill: colors.textSecondary }} />
                 <YAxis stroke={colors.textSecondary} tick={{ fill: colors.textSecondary }} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip colors={colors} />} />
                 <Legend wrapperStyle={{ color: colors.text }} />
                 <Area type="monotone" dataKey="count" name="Usage Count" fill={colors.accent} stroke={colors.accentSecondary} fillOpacity={0.3} />
               </AreaChart>

@@ -1,6 +1,7 @@
 // src/pages/Login.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import apiClient from '../api/axiosInstance';
 import { useTranslation } from 'react-i18next';
 import '../App.css';
@@ -53,12 +54,8 @@ const Login: React.FC = () => {
     } catch (err) {
       console.error('Login failed', err);
       // Determine error message based on type
-      let errorMessage = t('login_failed');
-      const error = err as any; // Cast to any to access properties safely
-      if (error.response && error.response.data && error.response.data.detail) {
-        errorMessage = error.response.data.detail;
-      }
-      alert(errorMessage);
+      const detail = axios.isAxiosError(err) ? err.response?.data?.detail : undefined;
+      alert(typeof detail === 'string' && detail ? detail : t('login_failed'));
     } finally {
       setIsLoading(false);
     }

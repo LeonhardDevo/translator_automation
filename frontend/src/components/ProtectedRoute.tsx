@@ -17,6 +17,9 @@ interface JwtPayload {
   exp?: number;
 }
 
+const isExpired = (payload: JwtPayload): boolean =>
+  payload.exp !== undefined && payload.exp * 1000 < Date.now();
+
 const decodeJwt = (token: string): JwtPayload | null => {
   try {
     const payload = token.split('.')[1];
@@ -43,7 +46,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
   }
 
   const payload = decodeJwt(token);
-  if (!payload || (payload.exp && payload.exp * 1000 < Date.now())) {
+  if (!payload || isExpired(payload)) {
     clearToken();
     return <Navigate to="/login" replace state={{ from: location }} />;
   }

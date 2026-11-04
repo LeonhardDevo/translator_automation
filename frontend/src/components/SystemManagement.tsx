@@ -61,7 +61,12 @@ const SystemManagement: React.FC = () => {
   const updateJwtConfig = async () => {
     setIsLoadingJwt(true);
     try {
-      const configUpdate: any = {};
+      const configUpdate: {
+        access_token_expire_minutes?: number;
+        refresh_token_expire_days?: number;
+        max_concurrent_sessions?: number;
+        enforce_strong_auth?: boolean;
+      } = {};
       if (jwtUpdates.access_token_expire_minutes) {
         configUpdate.access_token_expire_minutes = parseInt(jwtUpdates.access_token_expire_minutes);
       }

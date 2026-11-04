@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { getErrorMessage } from '../utils/errors';
 
 interface PricingPlan {
   id: number;
@@ -101,9 +102,9 @@ const PricingPage: React.FC = () => {
 
       const data = await response.json();
       alert(data.message);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Plan selection error:', error);
-      alert(`Error selecting plan: ${error.message}`);
+      alert(`Error selecting plan: ${getErrorMessage(error, 'Failed to select plan')}`);
     } finally {
       setLoadingPlan(null);
     }

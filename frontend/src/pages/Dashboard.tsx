@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../contexts/useUser';
 import UsageMeter from '../components/Dashboard/UsageMeter';
 import ImageTranslator from '../components/ImageTranslator';
 import UserManagement from '../components/Admin/UserManagement';
@@ -9,15 +9,9 @@ import Modal from '../components/Modal';
 
 const Dashboard: React.FC = () => {
   const { state, dispatch } = useUser();
-  const [isAdminView, setIsAdminView] = useState(false);
-  const [showLimitModal, setShowLimitModal] = useState(false);
-
-  useEffect(() => {
-    // Check if current user is admin and update view accordingly
-    if (state.user?.role === 'admin') {
-      setIsAdminView(true);
-    }
-  }, [state.user]);
+  const [limitModalDismissed, setLimitModalDismissed] = useState(false);
+  const isAdminView = state.user?.role === 'admin';
+  const showLimitModal = !limitModalDismissed && !!state.usage && state.usage.remaining <= 0;
 
   // Fetch usage data if not already loaded
   useEffect(() => {
@@ -40,15 +34,8 @@ const Dashboard: React.FC = () => {
     fetchUsage();
   }, [state.usage, dispatch]);
 
-  // Check if user has reached their limit and show modal if needed
-  useEffect(() => {
-    if (state.usage && state.usage.remaining <= 0) {
-      setShowLimitModal(true);
-    }
-  }, [state.usage]);
-
   const handleCloseModal = () => {
-    setShowLimitModal(false);
+    setLimitModalDismissed(true);
   };
 
   return (

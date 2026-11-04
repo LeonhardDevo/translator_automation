@@ -4,6 +4,7 @@ import apiClient from '../../api/axiosInstance';
 import UserRow from './UserRow';
 import type { User } from '../../types';
 import './UserManagement.css';
+import { getErrorMessage } from '../../utils/errors';
 
 interface UserManagementProps {
   onUserChange?: () => void;
@@ -144,9 +145,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserChange }) => {
       setShowPasswordInput(false);
 
       notifyChange();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to create user:', error);
-      alert(`Failed to create user: ${error.response?.data?.detail || error.message}`);
+      alert(`Failed to create user: ${getErrorMessage(error, 'Unknown error')}`);
     } finally {
       setIsGenerating(false);
     }
@@ -177,9 +178,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserChange }) => {
       });
       alert('Password reset successfully');
       closePasswordResetModal();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to reset password:', error);
-      alert(`Failed to reset password: ${error.response?.data?.detail || error.message}`);
+      alert(`Failed to reset password: ${getErrorMessage(error, 'Unknown error')}`);
     }
   };
 
@@ -208,9 +209,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ onUserChange }) => {
       alert('User deleted successfully');
       closeDeleteModal();
       notifyChange();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete user:', error);
-      alert(`Failed to delete user: ${error.response?.data?.detail || error.message}`);
+      alert(`Failed to delete user: ${getErrorMessage(error, 'Unknown error')}`);
     }
   };
 

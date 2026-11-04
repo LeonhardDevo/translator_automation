@@ -1,7 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { Button } from './ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
-import { useUser } from '../contexts/UserContext';
+import { useUser } from '../contexts/useUser';
+import { getErrorMessage } from '../utils/errors';
+
+interface TranslationResult {
+  current_usage: number;
+  remaining: number;
+}
 
 const UploadIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
@@ -18,7 +24,7 @@ const AlertCircleIcon = () => (
 const ImageTranslator: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<TranslationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { state, dispatch } = useUser();
@@ -73,8 +79,8 @@ const ImageTranslator: React.FC = () => {
       
       // Update local usage count
       dispatch({ type: 'UPDATE_TRANSLATION_COUNT' });
-    } catch (err: any) {
-      setError(err.message || 'Translation failed');
+    } catch (err) {
+      setError(getErrorMessage(err, 'Translation failed'));
     } finally {
       setIsTranslating(false);
     }

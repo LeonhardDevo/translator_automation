@@ -1,8 +1,9 @@
 import React from 'react';
 import UsageAnalyticsChart from '../UsageAnalyticsChart';
+import type { UsageAnalyticsData } from '../UsageAnalyticsChart';
 
 interface DashboardAnalyticsProps {
-    usageAnalytics: any;
+    usageAnalytics: UsageAnalyticsData | null;
     theme?: 'dark' | 'light';
 }
 

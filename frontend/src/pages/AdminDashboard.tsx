@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '../api/axiosInstance';
 import DashboardStats from '../components/Admin/DashboardStats';
 import DashboardAnalytics from '../components/Admin/DashboardAnalytics';
+import type { UsageAnalyticsData } from '../components/UsageAnalyticsChart';
 import Logo from '../components/ui/Logo';
 import ThemeToggle from '../components/ThemeToggle';
 import '../App.css';
@@ -26,7 +27,7 @@ interface SystemStats {
 
 const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<SystemStats | null>(null);
-  const [usageAnalytics, setUsageAnalytics] = useState<any>(null);
+  const [usageAnalytics, setUsageAnalytics] = useState<UsageAnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [activeTab, setActiveTab] = useState<'dashboard' | 'system' | 'pricing'>(() => {
