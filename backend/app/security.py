@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Optional
-from jose import jwt, JWTError
+import jwt
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
 from .config import settings
@@ -90,7 +90,7 @@ def get_current_user_or_admin(credentials: HTTPAuthorizationCredentials = Depend
         else:
             raise credentials_exception
 
-    except JWTError:
+    except jwt.PyJWTError:
         raise credentials_exception
     except Exception:
         raise credentials_exception
