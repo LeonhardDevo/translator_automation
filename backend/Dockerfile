@@ -1,47 +1,39 @@
-# Multi-stage build for the backend service
 FROM python:3.11-slim AS builder
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
+RUN apt-get update && apt-get install -y --no-install-recommends gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip wheel --no-cache-dir --no-deps --wheel-dir /usr/src/app/wheels -r requirements.txt
+WORKDIR /usr/src/app
 
-# Production stage
+COPY requirements.txt .
+RUN pip wheel --no-cache-dir --wheel-dir /usr/src/app/wheels -r requirements.txt
+
 FROM python:3.11-slim
 
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app
 
-# Create non-root user
-RUN adduser --disabled-password --gecos '' appuser
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgl1 \
+    libglib2.0-0 \
+    tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+RUN adduser --disabled-password --gecos '' appuser
+
 WORKDIR /app
 
-# Copy wheels and install dependencies
 COPY --from=builder /usr/src/app/wheels /wheels
 COPY --from=builder /usr/src/app/requirements.txt .
-RUN pip install --no-cache /wheels/*
+RUN pip install --no-cache-dir /wheels/* && rm -rf /wheels
 
-# Copy application code
-COPY . .
+COPY backend/ ./backend/
+COPY alembic.ini .
 
-# Change ownership to non-root user
 RUN chown -R appuser:appuser /app
 USER appuser
 
-# Expose port
 EXPOSE 7999
 
-# Run the application
-CMD ["gunicorn", "app.main:app", "--bind", "0.0.0.0:7999", "--worker-class", "uvicorn.workers.UvicornWorker", "--workers", "4"]
+CMD ["gunicorn", "backend.app.main:app", "--bind", "0.0.0.0:7999", "--worker-class", "uvicorn.workers.UvicornWorker", "--workers", "4"]

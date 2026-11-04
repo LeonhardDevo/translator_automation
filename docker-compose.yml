@@ -28,8 +28,8 @@ services:
   # Backend API service
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: ai_translation_backend
     restart: always
     depends_on:
