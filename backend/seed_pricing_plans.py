@@ -3,10 +3,10 @@ Script to seed the database with initial pricing plans
 """
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.database import get_session
-from app.models.pricing_models import PricingPlan
+from backend.app.database import get_session
+from backend.app.models.pricing_models import PricingPlan
 from datetime import datetime
 
 def seed_pricing_plans():

@@ -1,6 +1,6 @@
 import pytest
 from pathlib import Path
-from app.utils.safe_translator import SafeTranslator
+from backend.app.utils.safe_translator import SafeTranslator
 
 def test_safe_translator_security_rejection():
     code = "import os\nos.system(\"echo hacked\")"

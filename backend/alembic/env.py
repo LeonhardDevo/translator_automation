@@ -5,18 +5,18 @@ from alembic import context
 import sys
 import os
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from app.config import settings
-from app.database import engine
-from app.models.user import User
-from app.models.workspace import WorkspaceFolder
-from app.models.document import Document
-from app.models.api_key import GeminiApiKey
-from app.models.metadata_init import SQLModel
+from backend.app.config import settings
+from backend.app.database import engine
+from backend.app.models.user import User
+from backend.app.models.workspace import WorkspaceFolder
+from backend.app.models.document import Document
+from backend.app.models.api_key import GeminiApiKey
+from backend.app.models.metadata_init import SQLModel
 
 config = context.config
 
