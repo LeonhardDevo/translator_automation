@@ -70,7 +70,6 @@ def _claim_api_key_index(api_keys: list) -> int:
     Returns:
         The index of the claimed key (already marked busy in _busy_api_keys).
     """
-    global _busy_api_keys, _busy_keys_lock
     import time
     num_keys = len(api_keys)
     current_time = time.time()
@@ -159,7 +158,6 @@ class SafeTranslator:
     
     def _get_available_api_key_index(self):
         """Select a random API key index that is not currently busy"""
-        global _busy_api_keys, _busy_keys_lock
         import time
         
         max_wait_time = 30  # Maximum wait time in seconds
@@ -206,7 +204,6 @@ class SafeTranslator:
 
     def _rotate_api_key(self):
         """Rotate to the next API key in round-robin fashion"""
-        global _busy_api_keys, _busy_keys_lock
         import time
         old_index = self.selected_key_index
         
@@ -814,7 +811,6 @@ class SafeTranslator:
         Translate using a single API key for the entire process.
         This ensures 1 API key per translation document.
         """
-        global _busy_api_keys, _busy_keys_lock
         
         try:
             if api_key_index >= len(self.api_keys):
@@ -847,7 +843,6 @@ class SafeTranslator:
         
     def __del__(self):
         """Release the API key from busy state when translator is destroyed"""
-        global _busy_api_keys, _busy_keys_lock
         try:
             if hasattr(self, 'selected_key_index'):
                 with _busy_keys_lock:
